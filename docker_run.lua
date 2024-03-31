@@ -92,7 +92,79 @@ M.docker_images = function(opts)
 end
 
 
+M.docker_ps = function(opts)
+    pickers
+        .new(opts, {
+            finder = finders.new_dynamic({
+                fn = function()
+                    return M._make_docker_command { 'ps', '-a'}
+                end,
+
+                entry_maker = function(entry)
+                    local process = vim.json.decode(entry)
+                    logger.debug('Calling entry maker', process)
+                    if process then
+                        return {
+                            value = process,
+                            display = process.Names .. ' ' .. process.Image,
+                            ordinal = process.Names .. ':' .. process.Image .. ':' .. process.Status,
+                        }
+                    end
+                end,
+            }),
+
+            sorter = config.generic_sorter(opts),
+
+            previewer = previewers.new_buffer_previewer({
+                title = 'Process Details',
+                define_preview = function(self, entry)
+                    local formatted = {
+                        '# ' .. entry.display,
+                        '',
+                        '*ID*: ' .. entry.value.Names,
+						'*Image*: ' .. entry.value.Image,
+						'*Status*: ' .. entry.value.Status,
+						'*Ports*: ' .. entry.value.Ports,
+						'*CreatedAt*: ' .. entry.value.CreatedAt,
+						'*RunningFor*: ' .. entry.value.RunningFor,
+						'*Size*: ' .. entry.value.Size,
+						'*Labels*: ' .. entry.value.Labels,
+						'*Mounts*: ' .. entry.value.Mounts,
+                    }
+                    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, 0, true, formatted)
+                    utils.highlighter(self.state.bufnr, 'markdown')
+                end,
+            }),
+
+            attach_mappings = function(prompt_bufnr)
+                actions.select_default:replace(function()
+                    local selection = action_state.get_selected_entry()
+                    actions.close(prompt_bufnr)
+                    logger.debug('Selected', selection)
+					-- docker stop and remove container 
+--execute in terminals
+
+
+
+                    local command = {
+                        '!docker',
+						'stop',
+						selection.value.Names,
+						'&',
+						'docker',
+						'rm',
+						selection.value.Names,
+                    }
+                    logger.debug('Running', command)
+                    vim.cmd(vim.fn.join(command, ' '))
+                end)
+                return true
+            end,
+        })
+        :find()
+end
 
 M.docker_images()
+-- M.docker_ps()
 
 return M
