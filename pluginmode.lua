@@ -9,9 +9,11 @@ vim.api.nvim_create_user_command("PluginMode", function()
 		group = pluginModeGroup,
 		buffer = 0,
 		callback = function()
-			logger.debug("Save completed")
-			vim.cmd("source %")
-			logger.debug("Reloaded ->" .. vim.api.nvim_buf_get_name(0))
+			vim.schedule(function()
+				logger.debug("Save completed")
+				vim.cmd { cmd = "source", args = {"%"}}
+				logger.debug("Reloaded ->" .. vim.api.nvim_buf_get_name(0))
+			end)
 		end
 	})
 end, {})
